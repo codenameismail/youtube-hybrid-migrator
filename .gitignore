@@ -1,0 +1,17 @@
+# venv
+.venv/
+
+# python cache
+__pycache__/
+*.pyc
+
+# secrets - don't commit these!
+client_secret*.json
+token_old.pickle
+
+# other
+old_headers.json
+new_headers.json
+print-tree.js
+IMPORTANT.txt
+migrated_likes.txt
