@@ -1,8 +1,8 @@
-# 🚀 YouTube Ultimate Migrator
+# YouTube Ultimate Migrator
 
 A bulletproof, hybrid Python script to transfer your entire YouTube life (Liked Videos, Subscriptions, and Playlists) from an old account to a new one.
 
-### 🧠 Why This Script Exists (The "Hybrid" Magic)
+### Why This Script Exists (The "Hybrid" Magic)
 
 If you try to use the official YouTube API to migrate an account, Google will cut you off after about 200 "Likes" because of their strict daily quota limits (10,000 units/day).
 
@@ -13,7 +13,7 @@ This script uses a **Hybrid Approach** to bypass that completely:
 
 ---
 
-## 🛠️ Prerequisites
+## Prerequisites
 
 Before you begin, you need to have **Python** installed on your computer.
 
@@ -24,7 +24,7 @@ You will also need a web browser. **Firefox is highly recommended** for this pro
 
 ---
 
-## 📦 Step 1: Environment Setup
+## Step 1: Environment Setup
 
 1. **Download the project:** Clone this repository or download it as a ZIP and extract it.
 2. **Open your terminal:** (Command Prompt on Windows, Terminal on Mac) and navigate to this folder.
@@ -51,7 +51,7 @@ pip install google-api-python-client google-auth-oauthlib google-auth-httplib2 y
 
 ---
 
-## 🔑 Step 2: Get Old Account Credentials (The Reader)
+## Step 2: Get Old Account Credentials (The Reader)
 
 We need official API access to read your old account.
 
@@ -77,7 +77,7 @@ CLIENT_SECRET_FILE = "./client_secret.json"
 
 ---
 
-## 🍪 Step 3: Get New Account Cookies (The Writer)
+## Step 3: Get New Account Cookies (The Writer)
 
 We need to extract your session data so the script can act as "you" on the new account.
 
@@ -100,7 +100,7 @@ ytmusicapi browser
 
 ---
 
-## 🚀 Step 4: Run the Migration
+## Step 4: Run the Migration
 
 If you are migrating to a brand-new account, ensure the file `migrated_likes.txt` is **empty or deleted**. (The script uses this file as a memory bank so it can resume progress if you close it, preventing duplicate work).
 
@@ -119,7 +119,7 @@ python transfer_master.py
 
 ---
 
-## 🛑 Troubleshooting & Important Notes
+## Troubleshooting & Important Notes
 
 * **I stopped the script halfway, do I have to start over?**
 No! The script has "Resume Logic." Just run it again. It will check `migrated_likes.txt` and your new account to skip everything it already finished.
