@@ -1,17 +1,32 @@
-# venv
-.venv/
-
-# python cache
-__pycache__/
-*.pyc
-
-# secrets - don't commit these!
+# --- Private: credentials, cookies, tokens (NEVER commit) ---
+secrets/
 client_secret*.json
-token_old.pickle
-
-# other
+token*.json
+token*.pickle
 old_headers.json
 new_headers.json
-print-tree.js
+browser.json
+oauth.json
+
+# --- Personal data: your viewing history/progress ---
+state/
+migrated_*.txt
+playlist_types.txt
+yt_playlists_created.txt
 IMPORTANT.txt
-migrated_likes.txt
+
+# --- Python / editor ---
+.venv/
+venv/
+__pycache__/
+*.pyc
+.idea/
+.vscode/
+.DS_Store
+
+# other
+print-tree.js
+bundle-context.ps1
+full-diff.sh
+apply_commits.sh
+bundler-output/
