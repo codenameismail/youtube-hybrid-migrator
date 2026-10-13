@@ -1,131 +1,115 @@
 # YouTube Ultimate Migrator
 
-A bulletproof, hybrid Python script to transfer your entire YouTube life (Liked Videos, Subscriptions, and Playlists) from an old account to a new one.
+Copy everything you *consume* on YouTube from an old Google account to a new one: **liked videos, liked songs, subscriptions, and playlists**. It is built for the case Google doesn't cover: you can't transfer this data between accounts, and Takeout is only a backup.
 
-### Why This Script Exists (The "Hybrid" Magic)
-
-If you try to use the official YouTube API to migrate an account, Google will cut you off after about 200 "Likes" because of their strict daily quota limits (10,000 units/day).
-
-This script uses a **Hybrid Approach** to bypass that completely:
-
-1. **The Reader (Official API):** It logs into your OLD account using the official Google API to perfectly read 100% of your data (including non-music videos, tutorials, memes, etc.). *Reading costs almost zero quota.*
-2. **The Writer (Browser Cookies):** It logs into your NEW account by mimicking your web browser via `ytmusicapi`. *Writing this way costs ZERO quota,* allowing you to transfer thousands of items in one sitting.
+The part most tools get wrong is playlists. This one keeps **YouTube playlists on YouTube only** and **music playlists in YouTube Music**, instead of dumping everything into YouTube Music.
 
 ---
 
-## Prerequisites
+## What it does
 
-Before you begin, you need to have **Python** installed on your computer.
+| Migrated | How |
+|---|---|
+| Liked videos / liked songs | Read via the official API, re-liked through YouTube Music (no quota cost) |
+| Subscriptions | Read via the official API, re-subscribed through YouTube Music (no quota cost) |
+| Playlists you created | Rebuilt as **MUSIC** (YouTube Music) or **YOUTUBE** (YouTube only), keeping order, privacy and description |
 
-1. Download Python from [python.org](https://www.python.org/downloads/).
-2. **IMPORTANT FOR WINDOWS USERS:** When running the installer, make sure to check the box that says **"Add Python to PATH"** before clicking Install.
+**Not migrated** (no way to read or write it, or out of scope): Watch Later, playlists you *saved* from other people, albums/songs saved to your YouTube Music library without liking, uploaded songs/videos, watch and search history, notification-bell settings, comments. Your Google Takeout export is the only copy of those. See [How it works](docs/HOW_IT_WORKS.md#what-isnt-migrated).
 
-You will also need a web browser. **Firefox is highly recommended** for this process, as Chrome/Edge encrypt their cookies in a way that makes extracting them annoying.
+## How it works in 30 seconds
+
+- **Reader: official YouTube API** on the OLD account. It sees everything, including non-music videos. Reading costs about 1 quota unit.
+- **Writer for likes, subs and music playlists: YouTube Music via browser cookies** (`ytmusicapi`) on the NEW account. No quota.
+- **Writer for YouTube-only playlists: the official API** on the NEW account. Playlists created this way do not appear in YouTube Music (this was verified by hand: the same two videos stay hidden when created through YouTube, but show up when created through YouTube Music). It costs 50 quota units per write against a 10,000/day limit, so big libraries take a few days. The tool tracks quota and resumes where it stopped.
+
+Details and quota maths: [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
 
 ---
 
-## Step 1: Environment Setup
+## Quick start
 
-1. **Download the project:** Clone this repository or download it as a ZIP and extract it.
-2. **Open your terminal:** (Command Prompt on Windows, Terminal on Mac) and navigate to this folder.
-3. **Create a Virtual Environment:** This creates an isolated bubble for the project so it doesn't mess with other Python apps on your computer.
+Full instructions with every click: **[docs/SETUP.md](docs/SETUP.md)**. Short version:
+
 ```bash
 python -m venv .venv
-
+# Windows (cmd/PowerShell): .venv\Scripts\activate    Git Bash: source .venv/Scripts/activate
+# Mac/Linux:                source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
+Then, once:
 
-*(Note: If `python` doesn't work, try `py -m venv .venv` on Windows or `python3 -m venv .venv` on Mac).*
-4. **Activate the Virtual Environment:**
-* **Windows:** `.venv\Scripts\activate`
-* **Mac/Linux:** `source .venv/bin/activate`
+1. Put your Google Cloud OAuth file at `secrets/client_secret.json` (SETUP, Part 2).
+2. Save your NEW account's browser cookies to `secrets/new_headers.json` (SETUP, Part 3).
 
-
-5. **Install Dependencies:**
-```bash
-pip install google-api-python-client google-auth-oauthlib google-auth-httplib2 ytmusicapi
-
-```
-
-
-
----
-
-## Step 2: Get Old Account Credentials (The Reader)
-
-We need official API access to read your old account.
-
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Log in with your **OLD** Google account.
-3. Click **"Select a project"** at the top left and create a **New Project** (call it "YouTube Migrator").
-4. In the top search bar, type **"YouTube Data API v3"** and click **Enable**.
-5. Go to **APIs & Services > Credentials** (on the left menu).
-6. Click **+ CREATE CREDENTIALS** -> **OAuth client ID**.
-* *Note: If it asks you to configure a consent screen first, do so. Set it to "External", fill in dummy app names, add your email as a test user, and skip the scopes.*
-
-
-7. For Application Type, choose **Desktop app**.
-8. Click **Download JSON** (the little down arrow).
-9. Move that file into this project folder and rename it to `client_secret.json`.
-10. Open `config.py` in a text editor and ensure it points to this file:
-```python
-CLIENT_SECRET_FILE = "./client_secret.json"
-
-```
-
-
-
----
-
-## Step 3: Get New Account Cookies (The Writer)
-
-We need to extract your session data so the script can act as "you" on the new account.
-
-1. Open **Firefox** (Use a Private Window to ensure no accounts are mixed up).
-2. Go to [music.youtube.com](https://music.youtube.com) and log into your **NEW** account.
-3. Press `F12` to open Developer Tools and click the **Network** tab.
-4. In the filter box at the top of the Network tab, type `browse`.
-5. In the YouTube Music window, click on **Library** on the left menu.
-6. A request named `browse?prettyPrint=false` (or similar) will pop up in the Network tab.
-7. **Right-click** that `browse` request -> Hover over **Copy** -> Click **Copy Request Headers**.
-8. Go back to your terminal (ensure your `.venv` is still active) and run:
-```bash
-ytmusicapi browser
-
-```
-
-
-9. Follow the prompts: Paste the giant block of text you copied, press `Enter`, type `Ctrl+Z` (or `Ctrl+D` on Mac), and press `Enter` again.
-10. When it asks for a filename, save it exactly as: **`new_headers.json`**.
-
----
-
-## Step 4: Run the Migration
-
-If you are migrating to a brand-new account, ensure the file `migrated_likes.txt` is **empty or deleted**. (The script uses this file as a memory bank so it can resume progress if you close it, preventing duplicate work).
-
-Run the script:
+Run:
 
 ```bash
-python transfer_master.py
-
+python migrate.py
 ```
 
-**What will happen:**
+It shows both account names and asks you to confirm before writing anything. Then it does likes, subscriptions, and playlists in that order.
 
-1. A browser window will pop up asking you to log into Google. **Log into your OLD account here** and grant it permissions. (This creates a `token_old.pickle` file so you never have to log in again).
-2. The script will look at your new account, figure out what's missing, and start migrating your Likes, Subscriptions, and Playlists.
-3. It purposely runs slowly (pausing for 1.5 to 3.5 seconds between actions) to mimic human behavior and avoid shadow-bans. Let it run in the background!
+**Playlists pause once for your review.** The first time it reaches playlists, it writes `state/playlist_types.txt` with a MUSIC/YOUTUBE guess for each playlist (based on how many of its videos are in YouTube's Music category). Fix any wrong guesses in Notepad, save, and run `python migrate.py playlists`.
+
+### Commands
+
+| Command | What it does |
+|---|---|
+| `python migrate.py` | Likes, then subscriptions, then playlists |
+| `python migrate.py likes` | Only likes |
+| `python migrate.py subs` | Only subscriptions |
+| `python migrate.py playlists` | Only playlists |
+| `python migrate.py playlists --only "My Playlist"` | One playlist only. Do this first as a test |
+| `python migrate.py playlists --auto` | Accept the MUSIC/YOUTUBE guesses without pausing |
+| `python migrate.py reset` | Forget progress (before migrating to a different account) |
+| `--yes` (any command) | Skip the account confirmation |
+
+Everything is **resumable**: stop any time (Ctrl+C), run the same command again, and it skips what's done.
 
 ---
 
-## Troubleshooting & Important Notes
+## Before you delete the old account
 
-* **I stopped the script halfway, do I have to start over?**
-No! The script has "Resume Logic." Just run it again. It will check `migrated_likes.txt` and your new account to skip everything it already finished.
-* **I want to migrate to a THIRD account now.**
-You must delete `migrated_likes.txt` first. Otherwise, the script will think it already transferred your videos and will skip them. Generate a new `new_headers.json` for the third account and run the script.
-* **Some videos say "Skipping (Video is Private/Deleted)"**
-Normal. The script ignores dead links from your old account so it doesn't crash.
-* **Why did it skip my "Episodes for Later" or "Liked Music" playlists?**
-YouTube automatically generates these system playlists. The script ignores them because they cannot be manually duplicated.
+1. Compare counts on both accounts: liked videos, subscriptions, number of playlists, and the video count of each playlist.
+2. Check the YouTube-only playlists do **not** show in YouTube Music (fully close and reopen the app).
+3. Keep your Google Takeout archive permanently.
+4. Remember the list of things that can't be migrated above.
+5. Consider simply abandoning the old account instead of deleting it. Deletion is only recoverable for a short window.
+
+## Safety and privacy
+
+- `secrets/` holds your OAuth client, login tokens and **browser cookies. The cookie file is equivalent to a password** for the NEW account. `state/` holds your personal viewing data. Both are in `.gitignore`. **Never commit or share them.** Run `git status` before every commit.
+- When you're finished, delete `secrets/new_headers.json` and revoke the app at <https://myaccount.google.com/permissions> on both accounts.
+- This project uses [`ytmusicapi`](https://github.com/sigma67/ytmusicapi), an unofficial library that talks to YouTube Music the way the website does. It can break when YouTube changes, and automated activity can in principle upset Google. The tool is deliberately slow (random 1.5 to 3.5 second pauses). Use it at your own risk. This project is not affiliated with Google or YouTube.
+
+## Project layout
+
+```
+migrate.py          entry point (all commands)
+likes.py            step 1: liked videos / songs
+subscriptions.py    step 2: subscriptions
+playlists.py        step 3: playlists (MUSIC vs YOUTUBE)
+youtube_api.py      official YouTube Data API wrapper
+auth.py             Google OAuth login (tokens saved and auto-refreshed)
+quota.py            daily quota tracking across runs
+config.py, util.py  settings and helpers
+tests/              offline tests (no accounts needed)
+docs/               SETUP, HOW_IT_WORKS, TROUBLESHOOTING
+secrets/  state/    created at runtime, git-ignored
+```
+
+## Development
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+The tests use fake accounts, so they need no login or internet.
+
+## Docs
+
+- [Setup guide](docs/SETUP.md)
+- [How it works](docs/HOW_IT_WORKS.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Changelog](CHANGELOG.md)
