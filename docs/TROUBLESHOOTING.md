@@ -1,7 +1,16 @@
 # Troubleshooting
 
 **"Setup isn't finished yet: Missing secrets/..."**
-You haven't created `secrets/client_secret.json` (SETUP Part 2) or `secrets/new_headers.json` (SETUP Part 3).
+You haven't created `secrets/client_secret.json` (SETUP Part 2) or `secrets/new_headers.json` (SETUP Part 3A).
+
+**Only some subscriptions were found (e.g. 13 instead of 58)**
+Google's official API hides many subscriptions. Create `secrets/old_headers.json` by logging into your **OLD** account on **`www.youtube.com/feed/channels`** (not `music.youtube.com`) in a Private Window and copying the `browse` request headers (see SETUP Part 3B). Then run `python migrate.py subs` again.
+
+**Destination says `(couldn't read the name)` or subscriptions/likes fail with `HTTP 400: Bad Request`**
+Your `secrets/new_headers.json` cookies expired, you clicked "Sign out" after copying them, or you had multiple Google accounts signed into the same browser window (`X-Goog-AuthUser: 1`). Open a fresh Firefox Private Window, log into **only** the NEW account on `music.youtube.com`, recreate `secrets/new_headers.json` (SETUP Part 3A), and close the window without signing out.
+
+**Logged into the wrong sub-channel / Brand Account**
+A single Google email can hold multiple YouTube channels (even with the same display name). Delete `secrets/token_old.json` (or `secrets/token_new.json`), run the script again, and on Google's second login screen ("Choose an account or brand account"), pick the exact channel/avatar (`@handle`) that holds your data.
 
 **`ModuleNotFoundError` / "Missing dependencies"**
 The virtual environment isn't active. Activate it (see SETUP Part 1) and run `pip install -r requirements.txt`.
@@ -13,17 +22,19 @@ The account isn't listed as a Test user. In Google Cloud Console, open Google Au
 Normal for apps in Testing mode. Refresh tokens expire after about a week. Just log in again.
 
 **Authentication errors or `401`/`403` from YouTube Music**
-Your cookies expired. Redo SETUP Part 3 to replace `secrets/new_headers.json`.
+Your cookies expired. Redo SETUP Part 3A to replace `secrets/new_headers.json`.
 
 **`quotaExceeded` / "Daily quota used up"**
 Not an error, just the official API's daily limit. Run the same command the next day (after midnight Pacific time). Progress is saved.
 
 **A YouTube-only playlist still shows in YouTube Music**
+
 1. Check it's marked `YOUTUBE` in `state/playlist_types.txt`.
 2. Fully close and reopen the YouTube Music app, since it caches.
 3. Run `python migrate.py playlists` again. It detects playlists that appear in YouTube Music but should be YouTube-only, and offers to rebuild them.
 
 **I marked a playlist wrong and already ran it**
+
 - MUSIC to YOUTUBE: change the word and re-run. The tool offers to replace it.
 - YOUTUBE to MUSIC: delete that playlist on the NEW account, change the word to MUSIC, and re-run.
 
@@ -37,9 +48,10 @@ Deliberate: random pauses of 1.5 to 3.5 seconds avoid triggering Google's anti-a
 Close whatever uses port 8080, or change `port=8080` in `auth.py`.
 
 **Migrating to a different account later**
+
 1. `python migrate.py reset`
 2. Delete `secrets/token_new.json`
-3. Redo SETUP Part 3 with the new account
+3. Redo SETUP Part 3A with the new account
 4. Add the new account as a Test user in Google Cloud
 
 **A playlist with `<` or `>` in its title or description**

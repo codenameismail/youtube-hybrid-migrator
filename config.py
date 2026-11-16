@@ -8,6 +8,7 @@ SECRETS_DIR = ROOT / "secrets"
 CLIENT_SECRET_FILE = SECRETS_DIR / "client_secret.json"   # from Google Cloud Console
 OLD_TOKEN = SECRETS_DIR / "token_old.json"                # created on first login (OLD account)
 NEW_TOKEN = SECRETS_DIR / "token_new.json"                # created on first login (NEW account)
+OLD_HEADERS = SECRETS_DIR / "old_headers.json"            # optional: browser cookies for OLD account (reads hidden subs)
 NEW_HEADERS = SECRETS_DIR / "new_headers.json"            # browser cookies for the NEW account
 
 # Progress/memory files. Git-ignored. They contain your personal viewing data.

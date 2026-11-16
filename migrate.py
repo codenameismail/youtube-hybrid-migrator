@@ -124,7 +124,7 @@ def main(argv=None):
     if args.step in ("all", "likes"):
         likes.run(old_api, new_music)
     if args.step in ("all", "subs"):
-        subscriptions.run(old_api, new_music)
+        subscriptions.run(old_api, new_music, get_new_api=get_new_api)
     if args.step in ("all", "playlists"):
         playlists.run(old_api, new_music, get_new_api, QuotaTracker(),
                       only=args.only, auto=args.auto)

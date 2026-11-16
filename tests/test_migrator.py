@@ -48,7 +48,8 @@ class FakeOldAPI:
 class FakeMusic:
     def __init__(self, library=None, liked=(), subs=()):
         self.library = dict(library or {})          # title -> playlist id
-        self.tracks = {}                            # playlist id -> [video ids]
+        # playlist id -> [video ids]
+        self.tracks = {}
         self.liked = set(liked)
         self.subs = set(subs)
         self.created, self.deleted, self.rated, self.subscribed = [], [], [], []
@@ -107,7 +108,8 @@ class FakeNewAPI:
     def create_playlist(self, title, description, privacy):
         self._write()
         pid = f"Y{len(self.playlists)}"
-        self.playlists[pid] = {"title": title, "privacy": privacy, "videos": []}
+        self.playlists[pid] = {"title": title,
+                               "privacy": privacy, "videos": []}
         return pid
 
     def add_video(self, pid, vid):
@@ -122,11 +124,18 @@ class TempProject(unittest.TestCase):
         root = Path(self.tmp.name)
         self.patches = [
             mock.patch.object(config, "STATE_DIR", root / "state"),
-            mock.patch.object(config, "LIKES_MEMORY", root / "state" / "likes.txt"),
-            mock.patch.object(config, "SUBS_MEMORY", root / "state" / "subs.txt"),
-            mock.patch.object(config, "PLAYLIST_TYPES", root / "state" / "types.txt"),
-            mock.patch.object(config, "YT_PLAYLISTS_CREATED", root / "state" / "created.txt"),
-            mock.patch.object(config, "QUOTA_FILE", root / "state" / "quota.json"),
+            mock.patch.object(config, "OLD_HEADERS", root /
+                              "secrets" / "old_headers.json"),
+            mock.patch.object(config, "LIKES_MEMORY",
+                              root / "state" / "likes.txt"),
+            mock.patch.object(config, "SUBS_MEMORY",
+                              root / "state" / "subs.txt"),
+            mock.patch.object(config, "PLAYLIST_TYPES",
+                              root / "state" / "types.txt"),
+            mock.patch.object(config, "YT_PLAYLISTS_CREATED",
+                              root / "state" / "created.txt"),
+            mock.patch.object(config, "QUOTA_FILE", root /
+                              "state" / "quota.json"),
             mock.patch.object(util, "pause", lambda: None),
             mock.patch("time.sleep", lambda s: None),
         ]
@@ -170,7 +179,8 @@ class TypesFileTests(TempProject):
         old = FakeOldAPI({"Gym": ("private", ["m1", "m2"]), "A | B": ("public", ["v1"])},
                          music_ids=["m1", "m2"])
         playlists.build_types_file(old)
-        self.assertEqual(playlists.read_types(), {"Gym": "MUSIC", "A | B": "YOUTUBE"})
+        self.assertEqual(playlists.read_types(), {
+                         "Gym": "MUSIC", "A | B": "YOUTUBE"})
 
 
 class PlaylistFlowTests(TempProject):
@@ -182,16 +192,21 @@ class PlaylistFlowTests(TempProject):
 
     def run_flow(self, music, api, quota=None, answer="GO", **kw):
         quota = quota or QuotaTracker(today=lambda: "d")
-        playlists.run(self.old, music, lambda: api, quota, ask=lambda _: answer, **kw)
+        playlists.run(self.old, music, lambda: api,
+                      quota, ask=lambda _: answer, **kw)
 
     def test_each_playlist_is_built_the_right_way(self):
         music, api = FakeMusic(), FakeNewAPI()
         self.run_flow(music, api)
-        self.assertEqual(music.created, [("Gym", "PRIVATE")])           # music playlist via YT Music
-        self.assertNotIn("Vlogs", music.library)                          # YouTube one NOT via YT Music
-        vlogs = next(p for p in api.playlists.values() if p["title"] == "Vlogs")
+        # music playlist via YT Music
+        self.assertEqual(music.created, [("Gym", "PRIVATE")])
+        # YouTube one NOT via YT Music
+        self.assertNotIn("Vlogs", music.library)
+        vlogs = next(p for p in api.playlists.values()
+                     if p["title"] == "Vlogs")
         self.assertEqual(vlogs["videos"], ["v1", "v2", "v3"])
-        self.assertEqual(vlogs["privacy"], "public")                      # privacy preserved
+        # privacy preserved
+        self.assertEqual(vlogs["privacy"], "public")
 
     def test_second_run_changes_nothing(self):
         music, api = FakeMusic(), FakeNewAPI()
@@ -202,7 +217,8 @@ class PlaylistFlowTests(TempProject):
         self.assertEqual(music.created, created)
 
     def test_wrongly_made_youtube_playlist_is_replaced(self):
-        music = FakeMusic(library={"Vlogs": "OLDID"})   # shows in YT Music, wasn't made by the API
+        # shows in YT Music, wasn't made by the API
+        music = FakeMusic(library={"Vlogs": "OLDID"})
         api = FakeNewAPI()
         self.run_flow(music, api)
         self.assertEqual(music.deleted, ["OLDID"])
@@ -211,23 +227,29 @@ class PlaylistFlowTests(TempProject):
     def test_declining_changes_nothing(self):
         music, api = FakeMusic(library={"Vlogs": "OLDID"}), FakeNewAPI()
         self.run_flow(music, api, answer="no")
-        self.assertEqual((music.deleted, music.created, api.playlists), ([], [], {}))
+        self.assertEqual((music.deleted, music.created,
+                         api.playlists), ([], [], {}))
 
     def test_quota_stop_then_resume_without_duplicates(self):
         music = FakeMusic()
         api = FakeNewAPI()
-        q = QuotaTracker(budget=100, today=lambda: "d")                  # create + 1 video only
+        # create + 1 video only
+        q = QuotaTracker(budget=100, today=lambda: "d")
         self.run_flow(music, api, quota=q)
         self.assertEqual(len(api.playlists), 1)
         self.assertEqual(next(iter(api.playlists.values()))["videos"], ["v1"])
-        q2 = QuotaTracker(budget=9500, today=lambda: "next")             # "tomorrow"
+        # "tomorrow"
+        q2 = QuotaTracker(budget=9500, today=lambda: "next")
         self.run_flow(music, api, quota=q2)
         self.assertEqual(len(api.playlists), 1)
-        self.assertEqual(next(iter(api.playlists.values()))["videos"], ["v1", "v2", "v3"])
+        self.assertEqual(next(iter(api.playlists.values()))
+                         ["videos"], ["v1", "v2", "v3"])
 
     def test_real_quota_error_from_google_stops_cleanly(self):
-        music, api = FakeMusic(), FakeNewAPI(fail_after=2)               # Google says no after 2 writes
-        self.run_flow(music, api)                                         # must not raise
+        # Google says no after 2 writes
+        music, api = FakeMusic(), FakeNewAPI(fail_after=2)
+        # must not raise
+        self.run_flow(music, api)
         self.assertEqual(api.writes, 2)
 
     def test_only_limits_to_one_playlist(self):
@@ -253,12 +275,14 @@ class PlaylistFlowTests(TempProject):
         config.PLAYLIST_TYPES.unlink()
         music, api = FakeMusic(), FakeNewAPI()
         self.run_flow(music, api, auto=True)
-        self.assertEqual(len(api.playlists), 2)   # no music_ids -> both guessed YOUTUBE
+        # no music_ids -> both guessed YOUTUBE
+        self.assertEqual(len(api.playlists), 2)
 
 
 class LikesAndSubsTests(TempProject):
     def test_likes_skip_done_and_remember(self):
-        old = FakeOldAPI(likes_=["a", "b", "c"])          # newest first, as YouTube returns them
+        # newest first, as YouTube returns them
+        old = FakeOldAPI(likes_=["a", "b", "c"])
         music = FakeMusic(liked=["a"])
         util.append_line(config.LIKES_MEMORY, "b")
         likes.run(old, music)
@@ -279,6 +303,16 @@ class LikesAndSubsTests(TempProject):
         self.assertEqual(music.subscribed, ["c3"])
         subscriptions.run(old, music)
         self.assertEqual(music.subscribed, ["c3"])        # rerun: nothing new
+
+    def test_subs_fallback_to_official_api_when_ytmusic_rejects(self):
+        old = FakeOldAPI(subs=["c1"])
+        music = FakeMusic()
+        music.subscribe_artists = mock.Mock(
+            side_effect=RuntimeError("HTTP 400"))
+        new_api = mock.MagicMock()
+        subscriptions.run(old, music, get_new_api=lambda: new_api)
+        new_api.service.subscriptions.return_value.insert.assert_called_once()
+        self.assertIn("c1", util.read_set(config.SUBS_MEMORY))
 
 
 if __name__ == "__main__":
